@@ -25,14 +25,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      # The shared code lives in a private repo, so installing it needs a token
-      # with read access to it (fine-grained PAT, "Contents: read").
       - name: Install
-        env:
-          APP_REPO_TOKEN: ${{ secrets.APP_REPO_TOKEN }}
-        run: |
-          git config --global url."https://x-access-token:${APP_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
-          pip install -e . pytest
+        run: pip install -e . pytest
 
       # The corpus must be embedded with the same model the watcher uses at query time.
       - name: Start ollama with the embedding model

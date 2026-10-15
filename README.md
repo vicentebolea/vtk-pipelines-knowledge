@@ -83,11 +83,9 @@ unreachable, and fail in CI.
 the committed entries, runs the tests, and only then builds and pushes the
 image (sha and `latest` tags). A corpus with broken retrieval is not published.
 
-One-time setup: the shared code lives in a private repo, so add a repository
-secret `APP_REPO_TOKEN`, a fine-grained personal access token with
-`Contents: read` on `gitlab-pipelines-watch`. The workflow packages are private,
-and the package `vtk-pipelines-knowledge` must allow this repo to write to it
-(package settings, "Manage Actions access").
+One-time setup: the package `vtk-pipelines-knowledge` must allow this repo to
+write to it (package settings, "Manage Actions access"), because it was first
+published by the app repo's CI.
 
 ## Use the image
 
