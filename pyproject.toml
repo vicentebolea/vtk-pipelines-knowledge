@@ -1,0 +1,25 @@
+[project]
+name = "pipelines-knowledge"
+version = "0.1.0"
+description = "Build the vtk-pipelines-knowledge corpus: markdown entries and a Chroma database for pipelines-watch."
+requires-python = ">=3.10"
+dependencies = [
+    # Shared entry format, extraction and corpus code. Bump together with EXTRACTION_VERSION.
+    "pipelines-watch @ git+https://github.com/vicentebolea/gitlab-pipelines-watch@v0.2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+pipelines-knowledge = "pipelines_knowledge.cli:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+markers = ["embedding: needs the built corpus and the embedding model"]

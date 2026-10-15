@@ -1,0 +1,9 @@
+.venv/
+tmp/
+data/
+__pycache__/
+*.egg-info/
+.env
+.ruff_cache/
+knowledge/chroma/
+knowledge/manifest.json
