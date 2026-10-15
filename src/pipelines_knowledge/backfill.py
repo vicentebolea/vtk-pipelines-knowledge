@@ -11,13 +11,16 @@ from pipelines_watch.gitlab import ANSI, LOG_TAIL_CHARS
 log = logging.getLogger(__name__)
 
 
-def backfill(cfg, project_path, pipelines=200):
+def backfill(cfg, project_path, pipelines=200, target=None):
     """Stage 1: write one entry file per failure that was retried, labelled by what the retry did."""
     gl = gitlab.Gitlab(cfg.gitlab_url, private_token=cfg.gitlab_token, retry_transient_errors=True)
     project = gl.projects.get(project_path, lazy=True)
     extractor = build_extractor(cfg.extract_model)
     done = 0
-    for pipe in _take(project.pipelines.list(per_page=100, iterator=True), pipelines):
+    total = sum(1 for _ in entries.load_all(cfg.knowledge_dir))
+    for n, pipe in enumerate(_take(project.pipelines.list(per_page=100, iterator=True), pipelines), 1):
+        if target and total >= target:
+            break
         jobs = sorted(pipe.jobs.list(include_retried=True, get_all=True), key=lambda j: (j.name, j.id))
         for name, attempts in groupby(jobs, key=lambda j: j.name):
             attempts = list(attempts)
@@ -35,6 +38,9 @@ def backfill(cfg, project_path, pipelines=200):
                     project=project_path, job_id=j.id, pipeline_id=pipe.id, ref=pipe.ref, job_name=name,
                     platform=x.platform, error_type=x.error_type, snippet=scrub(x.snippet), outcome=outcome))
                 done += 1
+                total += 1
+                if done % 25 == 0:
+                    log.info("%d new entries (%d in total), pipeline %d scanned", done, total, n)
     log.info("wrote %d entries for %s", done, project_path)
 
 
