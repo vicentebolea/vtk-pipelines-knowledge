@@ -5,7 +5,8 @@ description = "Build the vtk-pipelines-knowledge corpus: markdown entries and a 
 requires-python = ">=3.10"
 dependencies = [
     # Shared entry format, extraction and corpus code. Bump together with EXTRACTION_VERSION.
-    "pipelines-watch @ git+https://github.com/vicentebolea/gitlab-pipelines-watch@v0.2.0",
+    "instructor",
+    "pipelines-watch @ git+https://github.com/vicentebolea/gitlab-pipelines-watch@v0.3.0",
 ]
 
 [project.optional-dependencies]

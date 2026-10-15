@@ -6,20 +6,26 @@ corpus and publishes it as an image. The online half (the watcher) is in
 
 ```mermaid
 flowchart TD
-    subgraph S1[Stage 1: pipelines-knowledge backfill]
+    subgraph S1[Stage 1: pipelines-knowledge scrape]
         H[Recent pipelines<br/>jobs with include_retried] --> G[Group attempts by job name]
         G --> O1{Later attempt exists?}
         O1 -- passed --> R1[retry_passed]
         O1 -- failed --> R2[retry_failed]
         O1 -- none --> X[Skipped]
-        R1 --> HINT[Pick last error lines<br/>before Job failed]
-        R2 --> HINT
-        HINT --> EX[LLM: snippet, platform, error type]
-        EX --> SC[Scrub timestamps, tokens, ids]
-        SC --> MD[(knowledge/entries/project/job_id.md)]
+        R1 --> RAW[(raw/project.jsonl<br/>log tail and outcome)]
+        R2 --> RAW
     end
 
-    subgraph S2[Stage 2: pipelines-knowledge load]
+    subgraph S2[Stage 2: pipelines-knowledge convert]
+        RAW --> HINT[Pick last error lines<br/>before Job failed]
+        HINT --> EX[LLM via instructor:<br/>snippet, platform, error type]
+        EX --> SC[Scrub timestamps, tokens, ids]
+        SC --> MD[(knowledge/entries/project/job_id.md)]
+        MD --> RT[Add similar and success_rate<br/>per matching error]
+        RT --> MD
+    end
+
+    subgraph S3[Stage 3: pipelines-knowledge load]
         MD --> EMB[Embed snippet only<br/>local ollama]
         EMB --> V[(Chroma: snippet vector,<br/>full markdown in metadata)]
         V --> MF[manifest.json<br/>embedding model, extraction version, count]

@@ -7,7 +7,7 @@ publishes a data-only image, `ghcr.io/vicentebolea/vtk-pipelines-knowledge`,
 which the watcher mounts.
 
 ```
-GitLab history --backfill--> knowledge/entries/*.md --load--> knowledge/chroma + manifest.json --CI--> image
+GitLab history --scrape--> raw/*.jsonl --convert--> knowledge/entries/*.md --load--> knowledge/chroma + manifest.json --CI--> image
 ```
 
 ## Layout
@@ -16,7 +16,9 @@ GitLab history --backfill--> knowledge/entries/*.md --load--> knowledge/chroma +
   the source of truth, plain markdown you can read and edit.
 - `knowledge/chroma/`, `knowledge/manifest.json`: built by `load`, not
   committed (CI rebuilds them).
-- `src/pipelines_knowledge/`: the two build stages.
+- `raw/<project>.jsonl`: what `scrape` fetched (failed job, log tail, outcome).
+  Not committed, it can hold large logs; `convert` can be rerun from it.
+- `src/pipelines_knowledge/`: the three build stages.
 - `tests/`: retrieval-quality tests on the real corpus.
 
 The entry format, the LLM extraction and the `Corpus` class come from the
@@ -32,27 +34,45 @@ python3 -m venv .venv
 ```
 
 Settings are the same `PW_*` variables as the watcher (see its README). You
-need `ANTHROPIC_API_KEY` for stage 1, a GitLab token (`PW_GITLAB_TOKEN`), and an
-ollama server with `nomic-embed-text` for stage 2.
+need a GitLab token (`PW_GITLAB_TOKEN`) for stage 1, `ANTHROPIC_API_KEY` for stage 2,
+and an ollama server with `nomic-embed-text` for stage 3.
 
-## Stage 1: write entries
+## Stage 1: scrape
 
 ```sh
-.venv/bin/pipelines-knowledge backfill group/project --pipelines 200
+.venv/bin/pipelines-knowledge scrape group/project --pipelines 200
 ```
 
-It reads the last 200 pipelines, including retried attempts. For every
-`script_failure` job that was run again, the LLM extracts the error snippet and
-the platform, and one entry is written. Its `outcome` is what the next attempt
+It reads the last 200 pipelines, including retried attempts, and appends one
+JSON line to `raw/<project>.jsonl` for every `script_failure` job that was run
+again: job, ref, runner, log tail and `outcome`, which is what the next attempt
 of the same job did: `retry_passed` (transient) or `retry_failed` (a real bug).
-Failures that were never retried are skipped. Timestamps, tokens and ids are
-scrubbed. Existing entries are skipped, so re-running is safe and repeating
-with another project adds to the corpus.
+Failures that were never retried are skipped. Jobs already in the file are
+skipped, so re-running is safe. `--limit N` stops once the file has N jobs
+(checked between pipelines).
+
+## Stage 2: convert
+
+```sh
+.venv/bin/pipelines-knowledge convert group/project
+```
+
+For each raw job without an entry, the LLM (through `instructor`, which
+validates the answer and retries it) extracts the error snippet, the platform
+and the error type, and one markdown entry is written. Timestamps, tokens and
+ids are scrubbed. A job whose extraction keeps failing is logged and skipped.
+Existing entries are skipped, so a run resumes where it stopped.
+
+At the end every entry gets `similar` and `success_rate`: how many retries of
+the same error the corpus holds and the share that passed. Errors are matched
+on the first snippet line with numbers and paths blanked. They are rewritten
+on each run, since new entries change them; `similar` tells how much to trust a
+rate (1 retry gives 0% or 100%).
 
 Review the entries (read them, fix a wrong platform or outcome, delete bad
 ones), then commit `knowledge/entries/`.
 
-## Stage 2: load into Chroma
+## Stage 3: load into Chroma
 
 ```sh
 .venv/bin/pipelines-knowledge load
@@ -99,6 +119,6 @@ podman run -d --env-file .env \
 ## When the extraction changes
 
 Edit the code in `gitlab-pipelines-watch`, bump `EXTRACTION_VERSION`, tag a
-release. Here: bump the pinned version in `pyproject.toml`, re-run stage 1 for
-the affected entries if the extraction output changes, `load`, commit, push.
+release. Here: bump the pinned version in `pyproject.toml`, delete the affected
+entries and re-run stage 2 (stage 1 need not be repeated) if the extraction output changes, `load`, commit, push.
 The watcher refuses to start on a corpus whose manifest does not match.
