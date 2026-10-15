@@ -85,6 +85,16 @@ entry count), which the watcher checks at startup. Entries already in Chroma
 are skipped: after editing a loaded file, `rm -rf knowledge/chroma` and load
 again.
 
+## Query the corpus
+
+```sh
+.venv/bin/python scripts/query.py "fatal: index file corrupt" -k 5
+```
+
+Shows what retrieval returns for an error text, without any LLM: distance
+(lower is closer), outcome, success rate of that error, error type, platform
+and job. Needs the loaded Chroma and the ollama server.
+
 ## Test
 
 ```sh
