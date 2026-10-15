@@ -16,8 +16,8 @@ GitLab history --scrape--> raw/*.jsonl --convert--> knowledge/entries/*.md --loa
   the source of truth, plain markdown you can read and edit.
 - `knowledge/chroma/`, `knowledge/manifest.json`: built by `load`, not
   committed (CI rebuilds them).
-- `raw/<project>.jsonl`: what `scrape` fetched (failed job, log tail, outcome).
-  Not committed, it can hold large logs; `convert` can be rerun from it.
+- `raw/<project>.jsonl`: what `scrape` fetched (failed job, log tail, outcome),
+  committed so that `convert` can be rerun without GitLab. Not part of the image.
 - `src/pipelines_knowledge/`: the three build stages.
 - `tests/`: retrieval-quality tests on the real corpus.
 

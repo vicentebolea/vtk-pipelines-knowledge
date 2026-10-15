@@ -11,6 +11,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+explore = ["seaborn", "pandas", "matplotlib", "jupyter"]
 
 [project.scripts]
 pipelines-knowledge = "pipelines_knowledge.cli:main"

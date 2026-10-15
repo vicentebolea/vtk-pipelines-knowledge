@@ -42,9 +42,10 @@ def convert(cfg, project_path, raw_dir):
 
 
 def _error_key(e):
-    """The root-cause line with numbers and paths blanked, so the same error on other jobs and runs matches."""
-    line = e.snippet.splitlines()[0].lower()
-    return re.sub(r"\s+", " ", re.sub(r"\S*[/\\]\S*|0x[0-9a-f]+|\d+", "#", line)).strip()
+    """The root-cause line with hashes, numbers and paths blanked, so the same error on other jobs and runs matches."""
+    line = re.sub(r"\S*[/\\]\S*|0x[0-9a-f]+|\b(?=[0-9a-f]*\d)[0-9a-f]{3,}\b|\d+", "#", e.snippet.splitlines()[0].lower())
+    line = re.sub(r"^#\s+(?=[a-z])", "", re.sub(r"\s+", " ", line).strip())  # a leftover id such as 01E
+    return re.sub(r"^(warning|error|fatal): ", "", line)
 
 
 def add_rates(knowledge_dir):
